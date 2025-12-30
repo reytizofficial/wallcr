@@ -228,7 +228,7 @@
             text-align: center;
         }
 
-        .address-display {
+            .address-display {
             background: var(--input-bg);
             padding: 20px;
             border-radius: 12px;
@@ -238,7 +238,13 @@
             border: 2px dashed var(--text-secondary);
             margin-bottom: 20px;
             color: var(--accent-green);
+            
+            /* ВОТ ЭТИ СТРОКИ ОТВЕЧАЮТ ЗА ПЕРЕНОС: */
+            word-break: break-all;      /* Разрывает длинное слово в любом месте */
+            overflow-wrap: break-word;  /* Дополнительная страховка для переноса */
+            white-space: normal;        /* Разрешает перенос строк */
         }
+
 
         .action-btn {
             width: 100%;
@@ -378,7 +384,7 @@
                 <!-- View 4: Deposit Info -->
                 <div id="view-deposit-info" class="view-section">
                     <p style="text-align: center; color: var(--text-secondary);">Отправьте средства на этот адрес:</p>
-                    <div class="address-display">TQ9k7P2m3A8Zv5L0R6dWnY8tQ4E7s</div>
+                    <div class="address-display">TQ9k7P2m3A8Zv5L0R6dWnY8tQ4E7s2U9c5</div>
                     <div class="warning-box">В случае указания неверного адреса средства возвращены не будут.</div>
                     <button class="action-btn" onclick="closeModal()">Понятно</button>
                 </div>
