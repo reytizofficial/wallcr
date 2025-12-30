@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoWallet Demo</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --input-bg: #0f172a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .wallet-container {
+            background-color: var(--card-bg);
+            width: 360px;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Balance Section */
+        .balance-card {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .balance-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .balance-currency {
+            font-size: 1rem;
+            color: var(--accent-green);
+        }
+
+        /* Action Buttons */
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-deposit { background-color: var(--accent-green); color: white; }
+        .btn-withdraw { background-color: var(--card-bg); border: 1px solid var(--text-secondary); color: var(--text-primary); }
+
+        /* Assets List Styles (Shared) */
+        .asset-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .asset-item:last-child { border-bottom: none; }
+        .asset-left { display: flex; align-items: center; gap: 12px; }
+        .asset-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 0.9rem;
+        }
+        .usdt-icon { background: #26a17b; color: white; }
+        .btc-icon { background: #f7931a; color: white; }
+        .eth-icon { background: #627eea; color: white; }
+        .sol-icon { background: #000; border: 1px solid #333; color: white; }
+        
+        .asset-name { display: flex; flex-direction: column; }
+        .asset-symbol { font-weight: 600; }
+        .asset-sub { font-size: 0.8rem; color: var(--text-secondary); }
+        .asset-right { text-align: right; }
+
+        .assets-title { font-size: 1.1rem; margin-bottom: 16px; font-weight: 600; }
+
+        /* Modal System */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; justify-content: center; align-items: flex-end; /* Bottom sheet style on mobile feel */
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        .modal {
+            background: var(--card-bg);
+            width: 100%;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal { transform: translateY(0); }
+
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-title { margin: 0; font-size: 1.2rem; }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+
+        /* Modal Content Views */
+        .view-section { display: none; animation: fadeIn 0.3s; }
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Option Buttons (Method Select) */
+        .option-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            color: white;
+            text-align: left;
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+        }
+        .option-btn:hover { background: rgba(255,255,255,0.05); }
+
+        /* Crypto Select List inside Modal */
+        .crypto-select-item {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 12px;
+        }
+        .crypto-select-item:hover { background: rgba(255,255,255,0.05); }
+
+        /* Forms */
+        .input-group { margin-bottom: 20px; }
+        .input-label { display: block; color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9rem; }
+        .input-field {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 14px;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .input-field:focus { outline: none; border-color: var(--accent-blue); }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .address-display {
+            background: var(--input-bg);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+            border: 2px dashed var(--text-secondary);
+            margin-bottom: 20px;
+            color: var(--accent-green);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            background: var(--accent-blue);
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="wallet-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">CryptoWallet</div>
+        </div>
+
+        <!-- Main Balance -->
+        <div class="balance-card">
+            <div class="balance-label">Общий баланс</div>
+            <h1 class="balance-amount">3 748,39 <span class="balance-currency">USDT</span></h1>
+            <div class="balance-label">≈ $3 746,52</div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="actions">
+            <!-- Передаем 'deposit' или 'withdraw' -->
+            <button class="btn btn-deposit" onclick="startFlow('deposit')">
+                ↓ Пополнить
+            </button>
+            <button class="btn btn-withdraw" onclick="startFlow('withdraw')">
+                ↑ Вывести
+            </button>
+        </div>
+
+        <!-- Assets List -->
+        <div class="assets-list">
+            <div class="assets-title">Активы</div>
+            <div class="asset-item">
+                <div class="asset-left">
+                    <div class="asset-icon usdt-icon">T</div>
+                    <div class="asset-name"><span class="asset-symbol">Tether</span><span class="asset-sub">USDT</span></div>
+                </div>
+                <div class="asset-right"><div class="asset-symbol">3 748,39</div><div class="asset-sub">$3 746,52</div></div>
+            </div>
+            <div class="asset-item">
+                <div class="asset-left">
+                    <div class="asset-icon btc-icon">₿</div>
+                    <div class="asset-name"><span class="asset-symbol">Bitcoin</span><span class="asset-sub">BTC</span></div>
+                </div>
+                <div class="asset-right"><div class="asset-symbol">0</div><div class="asset-sub">$0.00</div></div>
+            </div>
+            <div class="asset-item">
+                <div class="asset-left">
+                    <div class="asset-icon eth-icon">♦</div>
+                    <div class="asset-name"><span class="asset-symbol">Ethereum</span><span class="asset-sub">ETH</span></div>
+                </div>
+                <div class="asset-right"><div class="asset-symbol">0</div><div class="asset-sub">$0.00</div></div>
+            </div>
+            <div class="asset-item">
+                <div class="asset-left">
+                    <div class="asset-icon sol-icon">◎</div>
+                    <div class="asset-name"><span class="asset-symbol">Solana</span><span class="asset-sub">SOL</span></div>
+                </div>
+                <div class="asset-right"><div class="asset-symbol">0</div><div class="asset-sub">$0.00</div></div>
+            </div>
+        </div>
+
+        <!-- Dynamic Modal System -->
+        <div class="modal-overlay" id="mainModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTitle">Заголовок</h3>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+
+                <!-- View 1: Method Selection -->
+                <div id="view-method" class="view-section">
+                    <button class="option-btn" onclick="selectMethod('card')">
+                        💳 Банковская карта
+                    </button>
+                    <button class="option-btn" onclick="selectMethod('crypto')">
+                        ₿ Криптовалюты
+                    </button>
+                </div>
+
+                <!-- View 2: Crypto Selection -->
+                <div id="view-crypto-select" class="view-section">
+                    <div class="assets-title">Выберите актив</div>
+                    <!-- Список для клика (упрощенный) -->
+                    <div class="asset-item crypto-select-item" onclick="selectAsset('USDT')">
+                        <div class="asset-left">
+                            <div class="asset-icon usdt-icon">T</div>
+                            <div class="asset-name"><span class="asset-symbol">USDT</span></div>
+                        </div>
+                    </div>
+                    <div class="asset-item crypto-select-item" onclick="selectAsset('BTC')">
+                        <div class="asset-left">
+                            <div class="asset-icon btc-icon">₿</div>
+                            <div class="asset-name"><span class="asset-symbol">BTC</span></div>
+                        </div>
+                    </div>
+                    <div class="asset-item crypto-select-item" onclick="selectAsset('ETH')">
+                        <div class="asset-left">
+                            <div class="asset-icon eth-icon">♦</div>
+                            <div class="asset-name"><span class="asset-symbol">ETH</span></div>
+                        </div>
+                    </div>
+                    <div class="asset-item crypto-select-item" onclick="selectAsset('SOL')">
+                        <div class="asset-left">
+                            <div class="asset-icon sol-icon">◎</div>
+                            <div class="asset-name"><span class="asset-symbol">SOL</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 3: Withdraw Form -->
+                <div id="view-withdraw-form" class="view-section">
+                    <div class="warning-box">В случае указания неверного адреса средства возвращены не будут.</div>
+                    <div class="input-group">
+                        <label class="input-label">Адрес получателя</label>
+                        <input type="text" class="input-field" placeholder="Вставьте адрес кошелька...">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Сумма</label>
+                        <input type="number" class="input-field" placeholder="0.00">
+                    </div>
+                    <button class="action-btn" onclick="closeModal()">Вывести</button>
+                </div>
+
+                <!-- View 4: Deposit Info -->
+                <div id="view-deposit-info" class="view-section">
+                    <p style="text-align: center; color: var(--text-secondary);">Отправьте средства на этот адрес:</p>
+                    <div class="address-display">TQ9k7P2m3A8Zv5L0R6dWnY8tQ4E7s</div>
+                    <div class="warning-box">В случае указания неверного адреса средства возвращены не будут.</div>
+                    <button class="action-btn" onclick="closeModal()">Понятно</button>
+                </div>
+
+                <!-- View 5: Simple Alert (For Bank Card) -->
+                <div id="view-alert" class="view-section">
+                    <div class="warning-box" style="font-size: 1.1rem; margin-top: 20px;">
+                        ⚠️ Ограничения
+                    </div>
+                    <p style="text-align: center; color: var(--text-secondary);">Операции с банковскими картами РФ временно недоступны.</p>
+                    <button class="action-btn" onclick="closeModal()">ОК</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Состояние
+        let currentFlow = ''; // 'deposit' или 'withdraw'
+        let currentAsset = '';
+
+        const modalOverlay = document.getElementById('mainModal');
+        const modalTitle = document.getElementById('modalTitle');
+
+        // Views IDs
+        const views = {
+            method: document.getElementById('view-method'),
+            cryptoList: document.getElementById('view-crypto-select'),
+            withdraw: document.getElementById('view-withdraw-form'),
+            deposit: document.getElementById('view-deposit-info'),
+            alert: document.getElementById('view-alert')
+        };
+
+        // Utility to switch views
+        function switchView(viewName) {
+            // Hide all
+            Object.values(views).forEach(el => el.classList.remove('active'));
+            // Show target
+            if (views[viewName]) {
+                views[viewName].classList.add('active');
+            }
+        }
+
+        // 1. Start Flow (Button Click)
+        function startFlow(type) {
+            currentFlow = type;
+            modalOverlay.classList.add('active');
+            
+            if (type === 'deposit') {
+                modalTitle.innerText = 'Пополнение';
+            } else {
+                modalTitle.innerText = 'Вывод средств';
+            }
+            
+            switchView('method');
+        }
+
+        // 2. Select Method
+        function selectMethod(method) {
+            if (method === 'card') {
+                modalTitle.innerText = 'Банковская карта';
+                switchView('alert');
+            } else if (method === 'crypto') {
+                modalTitle.innerText = 'Выберите монету';
+                switchView('cryptoList');
+            }
+        }
+
+        // 3. Select Asset
+        function selectAsset(asset) {
+            currentAsset = asset;
+            
+            if (currentFlow === 'withdraw') {
+                modalTitle.innerText = `Вывод ${asset}`;
+                switchView('withdraw');
+            } else if (currentFlow === 'deposit') {
+                modalTitle.innerText = `Пополнить ${asset}`;
+                switchView('deposit');
+            }
+        }
+
+        // Close
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            // Reset views slightly delayed for smooth animation
+            setTimeout(() => {
+                switchView('method'); 
+            }, 300);
+        }
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Развернуть на весь экран
+    </script>
+</body>
+</html>
