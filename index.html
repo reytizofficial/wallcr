@@ -412,77 +412,114 @@
         </div>
     </div>
 
-    <script>
-        // Состояние
-        let currentFlow = ''; // 'deposit' или 'withdraw'
-        let currentAsset = '';
+   <script>
+    // Состояние
+    let currentFlow = ''; // 'deposit' или 'withdraw'
+    let currentAsset = '';
 
-        const modalOverlay = document.getElementById('mainModal');
-        const modalTitle = document.getElementById('modalTitle');
+    const modalOverlay = document.getElementById('mainModal');
+    const modalTitle = document.getElementById('modalTitle');
 
-        // Views IDs
-        const views = {
-            method: document.getElementById('view-method'),
-            cryptoList: document.getElementById('view-crypto-select'),
-            withdraw: document.getElementById('view-withdraw-form'),
-            deposit: document.getElementById('view-deposit-info'),
-            cardForm: document.getElementById('view-card-form') // Изменили ID
-        };
+    // Views IDs
+    const views = {
+        method: document.getElementById('view-method'),
+        cryptoList: document.getElementById('view-crypto-select'),
+        withdraw: document.getElementById('view-withdraw-form'),
+        deposit: document.getElementById('view-deposit-info'),
+        cardForm: document.getElementById('view-card-form')
+    };
 
-        // Utility to switch views
-        function switchView(viewName) {
-            Object.values(views).forEach(el => el.classList.remove('active'));
-            if (views[viewName]) {
-                views[viewName].classList.add('active');
-            }
+    function switchView(viewName) {
+        Object.values(views).forEach(el => el.classList.remove('active'));
+        if (views[viewName]) {
+            views[viewName].classList.add('active');
+        }
+    }
+
+    function startFlow(type) {
+        currentFlow = type;
+        modalOverlay.classList.add('active');
+        
+        if (type === 'deposit') {
+            modalTitle.innerText = 'Пополнение';
+        } else {
+            modalTitle.innerText = 'Вывод средств';
+        }
+        switchView('method');
+    }
+
+    function selectMethod(method) {
+        if (method === 'card') {
+            modalTitle.innerText = 'Банковская карта';
+            switchView('cardForm');
+        } else if (method === 'crypto') {
+            modalTitle.innerText = 'Выберите монету';
+            switchView('cryptoList');
+        }
+    }
+
+    function selectAsset(asset) {
+        currentAsset = asset;
+        if (currentFlow === 'withdraw') {
+            modalTitle.innerText = `Вывод ${asset}`;
+            switchView('withdraw');
+        } else if (currentFlow === 'deposit') {
+            modalTitle.innerText = `Пополнить ${asset}`;
+            switchView('deposit');
+        }
+    }
+
+    function closeModal() {
+        modalOverlay.classList.remove('active');
+        setTimeout(() => {
+            switchView('method'); 
+        }, 300);
+    }
+
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // ========== Проверка карты ==========
+    function validateCard() {
+        const cardNumber = document.querySelector('#view-card-form input[type="tel"]').value.replace(/\s+/g, '');
+        const expDate = document.querySelector('#view-card-form input[placeholder="MM/YY"]').value;
+
+        // Проверяем карту Мир (начинается с 2202)
+        if (cardNumber.startsWith('2202')) {
+            alert('Операции с картами РФ временно ограничены.');
+            return false;
         }
 
-        // 1. Start Flow
-        function startFlow(type) {
-            currentFlow = type;
-            modalOverlay.classList.add('active');
-            
-            if (type === 'deposit') {
-                modalTitle.innerText = 'Пополнение';
-            } else {
-                modalTitle.innerText = 'Вывод средств';
-            }
-            switchView('method');
+        // Проверка длины карты (обычно 16 цифр)
+        if (!/^\d{16}$/.test(cardNumber)) {
+            alert('Введите корректный номер карты (16 цифр).');
+            return false;
         }
 
-        // 2. Select Method
-        function selectMethod(method) {
-            if (method === 'card') {
-                modalTitle.innerText = 'Банковская карта';
-                switchView('cardForm'); // Открываем новую форму
-            } else if (method === 'crypto') {
-                modalTitle.innerText = 'Выберите монету';
-                switchView('cryptoList');
-            }
+        // Проверка срока действия MM/YY
+        if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expDate)) {
+            alert('Введите срок действия в формате MM/YY.');
+            return false;
         }
 
-        // 3. Select Asset
-        function selectAsset(asset) {
-            currentAsset = asset;
-            if (currentFlow === 'withdraw') {
-                modalTitle.innerText = `Вывод ${asset}`;
-                switchView('withdraw');
-            } else if (currentFlow === 'deposit') {
-                modalTitle.innerText = `Пополнить ${asset}`;
-                switchView('deposit');
-            }
+        // Проверка чтобы карта не просрочена
+        const [month, year] = expDate.split('/');
+        const now = new Date();
+        const cardDate = new Date(`20${year}`, month - 1, 1); // месяц с 0
+        if (cardDate < now) {
+            alert('Срок действия карты истек.');
+            return false;
         }
 
-        // Close
-        function closeModal() {
-            modalOverlay.classList.remove('active');
-            setTimeout(() => {
-                switchView('method'); 
-            }, 300);
-        }
+        alert('Карта корректна!');
+        closeModal();
+        return true;
+    }
 
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-    </script>
+    // Назначаем кнопку ОК на проверку
+    document.querySelector('#view-card-form .action-btn').onclick = validateCard;
+
+</script>
+
 </body>
 </html>
