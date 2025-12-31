@@ -104,7 +104,7 @@
         .btn-deposit { background-color: var(--accent-green); color: white; }
         .btn-withdraw { background-color: var(--card-bg); border: 1px solid var(--text-secondary); color: var(--text-primary); }
 
-        /* Assets List Styles (Shared) */
+        /* Assets List Styles */
         .asset-item {
             display: flex;
             justify-content: space-between;
@@ -128,7 +128,6 @@
         .asset-symbol { font-weight: 600; }
         .asset-sub { font-size: 0.8rem; color: var(--text-secondary); }
         .asset-right { text-align: right; }
-
         .assets-title { font-size: 1.1rem; margin-bottom: 16px; font-weight: 600; }
 
         /* Modal System */
@@ -136,7 +135,7 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
-            display: flex; justify-content: center; align-items: flex-end; /* Bottom sheet style on mobile feel */
+            display: flex; justify-content: center; align-items: flex-end;
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s;
             backdrop-filter: blur(5px);
@@ -154,8 +153,9 @@
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             border-top: 1px solid rgba(255,255,255,0.1);
-            max-height: 80%;
+            max-height: 90%; /* Увеличил высоту, чтобы влезла клавиатура на мобилках */
             overflow-y: auto;
+            box-sizing: border-box; /* Важно для padding */
         }
 
         .modal-overlay.active .modal { transform: translateY(0); }
@@ -176,7 +176,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Option Buttons (Method Select) */
+        /* Option Buttons */
         .option-btn {
             width: 100%;
             padding: 16px;
@@ -194,12 +194,8 @@
         }
         .option-btn:hover { background: rgba(255,255,255,0.05); }
 
-        /* Crypto Select List inside Modal */
-        .crypto-select-item {
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 12px;
-        }
+        /* Crypto Select */
+        .crypto-select-item { cursor: pointer; padding: 10px; border-radius: 12px; }
         .crypto-select-item:hover { background: rgba(255,255,255,0.05); }
 
         /* Forms */
@@ -228,7 +224,7 @@
             text-align: center;
         }
 
-            .address-display {
+        .address-display {
             background: var(--input-bg);
             padding: 20px;
             border-radius: 12px;
@@ -238,13 +234,10 @@
             border: 2px dashed var(--text-secondary);
             margin-bottom: 20px;
             color: var(--accent-green);
-            
-            /* ВОТ ЭТИ СТРОКИ ОТВЕЧАЮТ ЗА ПЕРЕНОС: */
-            word-break: break-all;      /* Разрывает длинное слово в любом месте */
-            overflow-wrap: break-word;  /* Дополнительная страховка для переноса */
-            white-space: normal;        /* Разрешает перенос строк */
+            word-break: break-all;
+            overflow-wrap: break-word;
+            white-space: normal;
         }
-
 
         .action-btn {
             width: 100%;
@@ -256,6 +249,15 @@
             cursor: pointer;
             background: var(--accent-blue);
             color: white;
+        }
+
+        /* Специальные стили для формы карты */
+        .row-inputs {
+            display: flex;
+            gap: 12px;
+        }
+        .row-inputs .input-group {
+            flex: 1;
         }
 
     </style>
@@ -277,7 +279,6 @@
 
         <!-- Buttons -->
         <div class="actions">
-            <!-- Передаем 'deposit' или 'withdraw' -->
             <button class="btn btn-deposit" onclick="startFlow('deposit')">
                 ↓ Пополнить
             </button>
@@ -340,7 +341,6 @@
                 <!-- View 2: Crypto Selection -->
                 <div id="view-crypto-select" class="view-section">
                     <div class="assets-title">Выберите актив</div>
-                    <!-- Список для клика (упрощенный) -->
                     <div class="asset-item crypto-select-item" onclick="selectAsset('USDT')">
                         <div class="asset-left">
                             <div class="asset-icon usdt-icon">T</div>
@@ -367,7 +367,7 @@
                     </div>
                 </div>
 
-                <!-- View 3: Withdraw Form -->
+                <!-- View 3: Withdraw Form (Crypto) -->
                 <div id="view-withdraw-form" class="view-section">
                     <div class="warning-box">В случае указания неверного адреса средства возвращены не будут.</div>
                     <div class="input-group">
@@ -381,7 +381,7 @@
                     <button class="action-btn" onclick="closeModal()">Вывести</button>
                 </div>
 
-                <!-- View 4: Deposit Info -->
+                <!-- View 4: Deposit Info (Crypto) -->
                 <div id="view-deposit-info" class="view-section">
                     <p style="text-align: center; color: var(--text-secondary);">Отправьте средства на этот адрес:</p>
                     <div class="address-display">TQ9k7P2m3A8Zv5L0R6dWnY8tQ4E7s2U9c5</div>
@@ -389,12 +389,22 @@
                     <button class="action-btn" onclick="closeModal()">Понятно</button>
                 </div>
 
-                <!-- View 5: Simple Alert (For Bank Card) -->
-                <div id="view-alert" class="view-section">
-                    <div class="warning-box" style="font-size: 1.1rem; margin-top: 20px;">
-                        ⚠️ Ограничения
+                <!-- View 5: Bank Card Form (NEW) -->
+                <div id="view-card-form" class="view-section">
+                    <div class="input-group">
+                        <label class="input-label">Номер карты</label>
+                        <input type="tel" class="input-field" placeholder="0000 0000 0000 0000" maxlength="19">
                     </div>
-                    <p style="text-align: center; color: var(--text-secondary);">Операции с банковскими картами РФ временно недоступны.</p>
+                    <div class="row-inputs">
+                        <div class="input-group">
+                            <label class="input-label">Срок действия</label>
+                            <input type="text" class="input-field" placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">CVV</label>
+                            <input type="password" class="input-field" placeholder="•••" maxlength="3">
+                        </div>
+                    </div>
                     <button class="action-btn" onclick="closeModal()">ОК</button>
                 </div>
 
@@ -416,20 +426,18 @@
             cryptoList: document.getElementById('view-crypto-select'),
             withdraw: document.getElementById('view-withdraw-form'),
             deposit: document.getElementById('view-deposit-info'),
-            alert: document.getElementById('view-alert')
+            cardForm: document.getElementById('view-card-form') // Изменили ID
         };
 
         // Utility to switch views
         function switchView(viewName) {
-            // Hide all
             Object.values(views).forEach(el => el.classList.remove('active'));
-            // Show target
             if (views[viewName]) {
                 views[viewName].classList.add('active');
             }
         }
 
-        // 1. Start Flow (Button Click)
+        // 1. Start Flow
         function startFlow(type) {
             currentFlow = type;
             modalOverlay.classList.add('active');
@@ -439,7 +447,6 @@
             } else {
                 modalTitle.innerText = 'Вывод средств';
             }
-            
             switchView('method');
         }
 
@@ -447,7 +454,7 @@
         function selectMethod(method) {
             if (method === 'card') {
                 modalTitle.innerText = 'Банковская карта';
-                switchView('alert');
+                switchView('cardForm'); // Открываем новую форму
             } else if (method === 'crypto') {
                 modalTitle.innerText = 'Выберите монету';
                 switchView('cryptoList');
@@ -457,7 +464,6 @@
         // 3. Select Asset
         function selectAsset(asset) {
             currentAsset = asset;
-            
             if (currentFlow === 'withdraw') {
                 modalTitle.innerText = `Вывод ${asset}`;
                 switchView('withdraw');
@@ -470,13 +476,13 @@
         // Close
         function closeModal() {
             modalOverlay.classList.remove('active');
-            // Reset views slightly delayed for smooth animation
             setTimeout(() => {
                 switchView('method'); 
             }, 300);
         }
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Развернуть на весь экран
+
+        const tg = window.Telegram.WebApp;
+        tg.expand();
     </script>
 </body>
 </html>
